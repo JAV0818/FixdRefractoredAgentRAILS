@@ -116,6 +116,10 @@ export const orderService = {
       depositReleasedAt: null,
       depositRefundedAt: null,
 
+      pendingItems: null,
+      pendingItemsAddedAt: null,
+      pendingItemsExpiresAt: null,
+
       customerRating: null,
       customerReview: null,
       ratedAt: null,
@@ -185,6 +189,10 @@ export const orderService = {
       depositCapturedAt: null,
       depositReleasedAt: null,
       depositRefundedAt: null,
+
+      pendingItems: null,
+      pendingItemsAddedAt: null,
+      pendingItemsExpiresAt: null,
 
       customerRating: null,
       customerReview: null,
@@ -506,16 +514,4 @@ export const orderService = {
     });
   },
 
-  // Mechanic finishes the job → Completed. Bumps the mechanic's lifetime job
-  // count atomically in the same batch. (Rating averages are recalculated by a
-  // Cloud Function, not here — see slice 2 / M10.)
-  async completeOrder(id: string, providerId: string): Promise<void> {
-    const now = Date.now();
-    const batch = writeBatch(db);
-    batch.update(doc(db, ORDERS, id), { status: "Completed", completedAt: now, updatedAt: now });
-    batch.update(doc(db, "users", providerId), {
-      "providerProfile.totalJobsCompleted": increment(1),
-    });
-    await batch.commit();
-  },
 };

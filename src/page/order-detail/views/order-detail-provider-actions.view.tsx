@@ -112,9 +112,15 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
   }, [router, order.id]);
 
   const onComplete = useCallback(() => {
-    if (!currentUser) return;
-    completeOrder.mutate({ orderId: order.id, providerId: currentUser.id });
-  }, [completeOrder, order.id, currentUser]);
+    completeOrder.mutate(order.id, {
+      onError: (error) => {
+        Alert.alert(
+          provider.completeErrorTitle,
+          error instanceof Error ? error.message : provider.completeErrorFallback,
+        );
+      },
+    });
+  }, [completeOrder, order.id, provider]);
 
   const onRecordCashPayment = useCallback(() => {
     router.push({
@@ -175,13 +181,16 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
 
   if (order.status === "InProgress" && isOwner) {
     const isPaymentBlocked = !order.inspectionCompletedAt;
+    const hasChargesPending =
+      !!order.pendingItems && order.pendingItems.length > 0;
+    const isBlocked = isPaymentBlocked || hasChargesPending;
 
     return (
       <View style={styles.actions}>
         <AppButton
           onPress={onComplete}
           loading={completeOrder.isPending}
-          disabled={isPaymentBlocked || completeOrder.isPending}
+          disabled={isBlocked || completeOrder.isPending}
         >
           {provider.complete}
         </AppButton>
@@ -189,13 +198,17 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
           <AppButton
             variant="secondary"
             onPress={onRecordCashPayment}
-            disabled={isPaymentBlocked || completeOrder.isPending}
+            disabled={isBlocked || completeOrder.isPending}
           >
             {provider.recordCashPayment}
           </AppButton>
         )}
         {!isPaymentBlocked && (
-          <AppButton variant="secondary" onPress={onAddCharges} disabled={completeOrder.isPending}>
+          <AppButton
+            variant="secondary"
+            onPress={onAddCharges}
+            disabled={hasChargesPending || completeOrder.isPending}
+          >
             {provider.addCharges}
           </AppButton>
         )}
@@ -206,6 +219,9 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
           {provider.chat}
         </AppButton>
         {isPaymentBlocked && <StatusHint text={provider.inspectionRequiredHint} />}
+        {hasChargesPending && !isPaymentBlocked && (
+          <StatusHint text={provider.chargesPendingHint} />
+        )}
       </View>
     );
   }

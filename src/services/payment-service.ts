@@ -17,6 +17,9 @@ type ReleaseDepositHoldData = { orderId: string };
 type StartOrderAndCaptureData = { orderId: string };
 type CancelOrderWithPolicyData = { orderId: string };
 type CancelOrderWithPolicyResult = { success: boolean; charged: boolean };
+type CompleteOrderData = { orderId: string };
+type ApproveCustomChargesData = { orderId: string };
+type RejectCustomChargesData = { orderId: string };
 type AddCustomChargesData = { orderId: string; newItems: { description: string | null; name: string; price: number; quantity: number }[] };
 
 export const paymentService = {
@@ -125,6 +128,37 @@ export const paymentService = {
     );
     const result = await callable({ orderId });
     return { charged: result.data.charged };
+  },
+
+  // Completes an in-progress job. Runs server-side so the protected
+  // totalJobsCompleted counter can be incremented via Admin SDK.
+  async completeOrder(orderId: string): Promise<void> {
+    const functions = getFunctions(firebaseApp);
+    const callable = httpsCallable<CompleteOrderData, { success: boolean }>(
+      functions,
+      "completeOrder",
+    );
+    await callable({ orderId });
+  },
+
+  // Customer approves pending charges — merges them into the order total.
+  async approveCustomCharges(orderId: string): Promise<void> {
+    const functions = getFunctions(firebaseApp);
+    const callable = httpsCallable<ApproveCustomChargesData, { success: boolean }>(
+      functions,
+      "approveCustomCharges",
+    );
+    await callable({ orderId });
+  },
+
+  // Customer rejects pending charges — clears them without merging.
+  async rejectCustomCharges(orderId: string): Promise<void> {
+    const functions = getFunctions(firebaseApp);
+    const callable = httpsCallable<RejectCustomChargesData, { success: boolean }>(
+      functions,
+      "rejectCustomCharges",
+    );
+    await callable({ orderId });
   },
 
   // Adds custom charges to an in-progress order. Runs server-side so
