@@ -2,7 +2,7 @@
 // owns the customer-only hooks + side-effects (approve / decline / cancel with
 // confirm) and the passive "waiting" hints.
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 import { useRouter } from "expo-router";
@@ -18,6 +18,8 @@ import { ORDER_DETAIL_COPY } from "../order-detail.constants";
 import { useApproveQuote } from "../hooks/use-approve-quote";
 import { useDeclineQuote } from "../hooks/use-decline-quote";
 import { useCancelOrder } from "../hooks/use-cancel-order";
+import { useApproveCharges } from "../hooks/use-approve-charges";
+import { useRejectCharges } from "../hooks/use-reject-charges";
 import { StatusHint } from "../components";
 
 type CustomerActionsProps = {
@@ -30,9 +32,34 @@ export const CustomerActions = ({ order }: CustomerActionsProps) => {
   const approveQuote = useApproveQuote();
   const declineQuote = useDeclineQuote();
   const cancelOrder = useCancelOrder();
-  const isBusy = approveQuote.isPending || declineQuote.isPending || cancelOrder.isPending;
+  const approveCharges = useApproveCharges();
+  const rejectCharges = useRejectCharges();
+  const isBusy =
+    approveQuote.isPending ||
+    declineQuote.isPending ||
+    cancelOrder.isPending ||
+    approveCharges.isPending ||
+    rejectCharges.isPending;
 
   const { customer, depositNote } = ORDER_DETAIL_COPY;
+
+  // Countdown timer for pending charges
+  const hasPending =
+    !!order.pendingItems && order.pendingItems.length > 0 && !!order.pendingItemsExpiresAt;
+  const [remainingMs, setRemainingMs] = useState(() =>
+    hasPending ? Math.max((order.pendingItemsExpiresAt ?? 0) - Date.now(), 0) : 0,
+  );
+
+  useEffect(() => {
+    if (!hasPending) {
+      setRemainingMs(0);
+      return;
+    }
+    const tick = () => setRemainingMs(Math.max((order.pendingItemsExpiresAt ?? 0) - Date.now(), 0));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [hasPending, order.pendingItemsExpiresAt]);
 
   const onApprove = useCallback(() => approveQuote.mutate(order.id), [approveQuote, order.id]);
 
@@ -57,6 +84,22 @@ export const CustomerActions = ({ order }: CustomerActionsProps) => {
       },
     ]);
   }, [customer, declineQuote, order.id]);
+
+  const onApproveCharges = useCallback(
+    () => approveCharges.mutate(order.id),
+    [approveCharges, order.id],
+  );
+
+  const onRejectCharges = useCallback(() => {
+    Alert.alert(customer.rejectChargesTitle, customer.rejectChargesBody, [
+      { text: customer.keepCharges, style: "cancel" },
+      {
+        text: customer.rejectChargesConfirm,
+        style: "destructive",
+        onPress: () => rejectCharges.mutate(order.id),
+      },
+    ]);
+  }, [customer, rejectCharges, order.id]);
 
   const onCancelService = useCallback(() => {
     if (!currentUser) return;
@@ -97,8 +140,41 @@ export const CustomerActions = ({ order }: CustomerActionsProps) => {
   }
 
   if (order.status === "InProgress" || order.status === "Completed") {
+    const expired = hasPending && remainingMs <= 0;
+    const showPending = hasPending && !expired;
+    const minutes = Math.floor(remainingMs / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
+    const countdown = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
     return (
       <View style={styles.actions}>
+        {showPending && (
+          <View style={styles.pendingCard}>
+            <Text style={styles.pendingTitle}>{customer.pendingChargesTitle}</Text>
+            {order.pendingItems!.map((item, i) => (
+              <View key={i} style={styles.pendingRow}>
+                <Text style={styles.pendingItemName}>
+                  {item.name} x{item.quantity}
+                </Text>
+                <Text style={styles.pendingItemPrice}>
+                  {formatCurrency(item.price * item.quantity)}
+                </Text>
+              </View>
+            ))}
+            <Text style={styles.countdown}>Expires in {countdown}</Text>
+            <AppButton
+              onPress={onApproveCharges}
+              loading={approveCharges.isPending}
+              disabled={isBusy}
+            >
+              {customer.approveCharges}
+            </AppButton>
+            <AppButton variant="danger" onPress={onRejectCharges} disabled={isBusy}>
+              {customer.rejectCharges}
+            </AppButton>
+          </View>
+        )}
+        {expired && <StatusHint text={customer.chargesExpired} />}
         <AppButton variant="secondary" onPress={onMessageProvider}>
           {customer.messageProvider}
         </AppButton>
@@ -135,5 +211,36 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textSecondary,
     textAlign: "center",
+  },
+  pendingCard: {
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: 12,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  pendingTitle: {
+    fontSize: fontSize.base,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  pendingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pendingItemName: {
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+  },
+  pendingItemPrice: {
+    fontSize: fontSize.sm,
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  countdown: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginTop: spacing.xs,
   },
 });

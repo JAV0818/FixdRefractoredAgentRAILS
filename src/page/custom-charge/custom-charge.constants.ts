@@ -15,4 +15,5 @@ export const CUSTOM_CHARGE_COPY = {
   submit: "Save charges",
   submitting: "Saving…",
   submitError: "We couldn't save the charges. Please try again.",
+  pendingChargesBlocked: "There are already charges waiting for customer approval. Please wait for the customer to respond before adding more.",
 } as const;

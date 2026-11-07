@@ -1,3 +1,7 @@
+// addCustomCharges — mechanic submits extra line items during an InProgress job.
+// Items are stored as pendingItems with a 15-minute approval window. The customer
+// must approve before they merge into the order total.
+
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 
@@ -13,7 +17,7 @@ interface AddCustomChargesRequest {
   newItems: OrderItem[];
 }
 
-const PLATFORM_DEPOSIT = 20;
+const PENDING_CHARGES_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 export const addCustomCharges = onCall<AddCustomChargesRequest>(async (request) => {
   if (!request.auth) {
@@ -41,7 +45,7 @@ export const addCustomCharges = onCall<AddCustomChargesRequest>(async (request) 
     const data = snap.data() as {
       providerId: string | null;
       status: string;
-      items: OrderItem[];
+      pendingItems?: OrderItem[] | null;
     };
 
     if (data.providerId !== providerId) {
@@ -52,20 +56,21 @@ export const addCustomCharges = onCall<AddCustomChargesRequest>(async (request) 
       throw new HttpsError("failed-precondition", "Charges can only be added to an in-progress order.");
     }
 
-    const updatedItems = [...data.items, ...newItems];
-    const earnings = updatedItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
-    const totalPrice = earnings + PLATFORM_DEPOSIT;
+    if (data.pendingItems && data.pendingItems.length > 0) {
+      throw new HttpsError("failed-precondition", "There are already charges pending customer approval.");
+    }
 
+    const now = Date.now();
     tx.update(orderRef, {
-      items: updatedItems,
-      totalPrice,
-      remainingBalance: Math.max(totalPrice - PLATFORM_DEPOSIT, 0),
-      updatedAt: Date.now(),
+      pendingItems: newItems,
+      pendingItemsAddedAt: now,
+      pendingItemsExpiresAt: now + PENDING_CHARGES_TTL_MS,
+      updatedAt: now,
     });
   });
 
   // eslint-disable-next-line no-console
-  console.log(`[addCustomCharges] added ${newItems.length} items to order ${orderId}`);
+  console.log(`[addCustomCharges] ${newItems.length} pending items added to order ${orderId}`);
 
   return { success: true };
 });

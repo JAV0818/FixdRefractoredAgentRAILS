@@ -99,6 +99,14 @@ export const CustomChargeView = () => {
     );
   }
 
+  if (order.pendingItems && order.pendingItems.length > 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.muted}>{CUSTOM_CHARGE_COPY.pendingChargesBlocked}</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardSafeView contentContainerStyle={styles.content}>
       <View>

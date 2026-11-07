@@ -134,6 +134,11 @@ export type RepairOrder = {
   customerReview: string | null;
   ratedAt: number | null;
 
+  // Pending custom charges awaiting customer approval (15-min window).
+  pendingItems: OrderItem[] | null;
+  pendingItemsAddedAt: number | null;
+  pendingItemsExpiresAt: number | null;
+
   // Rating — mechanic → customer (feeds the customer profile's averageRating)
   customerRatedAt: number | null;
   ratingOfCustomer: number | null;

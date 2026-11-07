@@ -56,6 +56,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "quoteExpiresAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "repair-orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "pendingItemsExpiresAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
