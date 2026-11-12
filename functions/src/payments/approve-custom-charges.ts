@@ -15,7 +15,7 @@ interface ApproveCustomChargesRequest {
   orderId: string;
 }
 
-const PLATFORM_DEPOSIT = 20;
+const PLATFORM_DEPOSIT = 35;
 
 export const approveCustomCharges = onCall<ApproveCustomChargesRequest>(async (request) => {
   if (!request.auth) {

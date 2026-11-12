@@ -6,7 +6,7 @@ interface CreateStripePaymentIntentRequest {
   orderId: string;
 }
 
-const DEPOSIT_AMOUNT_CENTS = 2000; // $20.00
+const DEPOSIT_AMOUNT_CENTS = 3500; // $35.00 — includes $15 no-show protection
 const CURRENCY = "usd";
 
 export const createStripePaymentIntent = onCall<CreateStripePaymentIntentRequest>(

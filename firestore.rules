@@ -76,6 +76,14 @@ service cloud.firestore {
     // Payment and financial fields that only Cloud Functions (Admin SDK) may
     // change. The Admin SDK bypasses rules, so these constraints only block
     // client-side writes.
+    function lateArrivalFieldsUnchanged() {
+      return request.resource.data.get('timeExtensionRequestedAt', null) == resource.data.get('timeExtensionRequestedAt', null)
+        && request.resource.data.get('timeExtensionMinutes', null) == resource.data.get('timeExtensionMinutes', null)
+        && request.resource.data.get('timeExtensionApprovedAt', null) == resource.data.get('timeExtensionApprovedAt', null)
+        && request.resource.data.get('extendedScheduledAt', null) == resource.data.get('extendedScheduledAt', null)
+        && request.resource.data.get('customerNoShowAt', null) == resource.data.get('customerNoShowAt', null);
+    }
+
     function paymentFieldsUnchanged() {
       return request.resource.data.get('paymentStatus', 'pending') == resource.data.get('paymentStatus', 'pending')
         && request.resource.data.get('stripePaymentIntentId', null) == resource.data.get('stripePaymentIntentId', null)
@@ -83,7 +91,7 @@ service cloud.firestore {
         && request.resource.data.get('depositCapturedAt', null) == resource.data.get('depositCapturedAt', null)
         && request.resource.data.get('depositReleasedAt', null) == resource.data.get('depositReleasedAt', null)
         && request.resource.data.get('depositRefundedAt', null) == resource.data.get('depositRefundedAt', null)
-        && request.resource.data.get('depositAmount', 20) == resource.data.get('depositAmount', 20);
+        && request.resource.data.get('depositAmount', 35) == resource.data.get('depositAmount', 35);
     }
 
     match /repair-orders/{orderId} {
@@ -97,7 +105,7 @@ service cloud.firestore {
         (currentUserRole() == 'provider' && resource.data.status == 'Pending' && resource.data.providerId == null)
       );
 
-      allow update: if isAuthenticated() && paymentFieldsUnchanged() && (
+      allow update: if isAuthenticated() && paymentFieldsUnchanged() && lateArrivalFieldsUnchanged() && (
         resource.data.customerId == currentUserId() ||
         resource.data.providerId == currentUserId() ||
         isOwner() ||

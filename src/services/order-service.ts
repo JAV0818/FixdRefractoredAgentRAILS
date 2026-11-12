@@ -33,7 +33,7 @@ import type {
 const ORDERS = "repair-orders";
 
 // The $20 deposit IS the flat platform fee (BACKEND_DESIGN.md §5.3).
-export const PLATFORM_DEPOSIT = 20;
+export const PLATFORM_DEPOSIT = 35;
 
 // Mechanic-claim window: a Pending order auto-expires 24h after creation if no
 // mechanic accepts it (BACKEND_DESIGN.md "Revised order & payment lifecycle").
@@ -120,6 +120,12 @@ export const orderService = {
       pendingItemsAddedAt: null,
       pendingItemsExpiresAt: null,
 
+      timeExtensionRequestedAt: null,
+      timeExtensionMinutes: null,
+      timeExtensionApprovedAt: null,
+      extendedScheduledAt: null,
+      customerNoShowAt: null,
+
       customerRating: null,
       customerReview: null,
       ratedAt: null,
@@ -193,6 +199,12 @@ export const orderService = {
       pendingItems: null,
       pendingItemsAddedAt: null,
       pendingItemsExpiresAt: null,
+
+      timeExtensionRequestedAt: null,
+      timeExtensionMinutes: null,
+      timeExtensionApprovedAt: null,
+      extendedScheduledAt: null,
+      customerNoShowAt: null,
 
       customerRating: null,
       customerReview: null,

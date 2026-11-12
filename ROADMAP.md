@@ -17,7 +17,7 @@
 | M7 | Messaging (CometChat) | DONE | Customer + provider conversation lists, shared real-time chat, CometChat auth wiring, and order-detail Message buttons all shipped. Requires dev client build + CometChat credentials for runtime testing. |
 | M8 | Admin Flow | NOT STARTED | Can start after M3 + M5. |
 | M9 | Payments | CODE LANDED | Stripe SDK installed, `payment-service` + `transaction-service` created, Firebase Callable stubs added, customer payment + provider collect-payment screens landed, and order-detail CTAs wired. Requires dev client build + deployed Cloud Functions (M10) for end-to-end testing. |
-| M10 | Polish: Cloud Functions, Push, Security Rules | NOT STARTED | `acceptOrder` has a client-side expiry guard until the expire function exists. Firestore composite indexes created ad-hoc; `firestore.indexes.json` holds the canonical set. |
+| M10 | Polish: Cloud Functions, Push, Security Rules | IN PROGRESS | Time extension UI (mechanic request + customer approve), customer no-show flow ($35 auto-capture), deposit raised $20→$35, `lateArrivalFieldsUnchanged` security rule. Firestore composite indexes in `firestore.indexes.json`. |
 | M11 | Stripe Connect: mechanic card final payments | NOT STARTED | Mechanics receive card final payments into their own Stripe Express accounts; Fixd collects an application fee; dispute liability stays with the mechanic. See `.agents/runs/stripe-connect/`. |
 
 ## Divergences & additions beyond the original plan (as of 2026-06-08)
@@ -34,8 +34,8 @@ disagree, **the code wins**; the key deltas:
   customer just approves (no calendar at approval). The plan had the mechanic
   scheduling via an `update-status` screen.
 - **Pricing is fee-on-top, not carved out.** The mechanic's line items are their
-  earnings; the flat $20 deposit is added on top for the customer's total
-  (`totalPrice = earnings + $20`).
+  earnings; the flat $35 deposit is added on top for the customer's total
+  (`totalPrice = earnings + $35`). Includes $15 no-show protection.
 - **Order screens are real-time, not polled.** The Requests list and order-detail
   stream live via Firestore `onSnapshot`; React Query still backs the provider
   lists and all mutations.
