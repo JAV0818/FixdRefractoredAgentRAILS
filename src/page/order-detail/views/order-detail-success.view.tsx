@@ -89,7 +89,16 @@ export const OrderDetailSuccessView = ({ order }: OrderDetailSuccessViewProps) =
 
       {order.scheduledAt !== null && (
         <DetailSection title={ORDER_DETAIL_COPY.sections.when}>
-          <Text style={styles.body}>{formatDateTime(order.scheduledAt)}</Text>
+          <Text style={styles.body}>
+            {order.extendedScheduledAt
+              ? formatDateTime(order.extendedScheduledAt)
+              : formatDateTime(order.scheduledAt)}
+          </Text>
+          {order.extendedScheduledAt && (
+            <Text style={styles.muted}>
+              Originally {formatDateTime(order.scheduledAt)}
+            </Text>
+          )}
         </DetailSection>
       )}
 

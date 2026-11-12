@@ -20,6 +20,7 @@ import { useDeclineQuote } from "../hooks/use-decline-quote";
 import { useCancelOrder } from "../hooks/use-cancel-order";
 import { useApproveCharges } from "../hooks/use-approve-charges";
 import { useRejectCharges } from "../hooks/use-reject-charges";
+import { useRespondToExtension } from "../hooks/use-respond-to-extension";
 import { StatusHint } from "../components";
 
 type CustomerActionsProps = {
@@ -34,12 +35,14 @@ export const CustomerActions = ({ order }: CustomerActionsProps) => {
   const cancelOrder = useCancelOrder();
   const approveCharges = useApproveCharges();
   const rejectCharges = useRejectCharges();
+  const respondToExtension = useRespondToExtension();
   const isBusy =
     approveQuote.isPending ||
     declineQuote.isPending ||
     cancelOrder.isPending ||
     approveCharges.isPending ||
-    rejectCharges.isPending;
+    rejectCharges.isPending ||
+    respondToExtension.isPending;
 
   const { customer, depositNote } = ORDER_DETAIL_COPY;
 
@@ -101,6 +104,17 @@ export const CustomerActions = ({ order }: CustomerActionsProps) => {
     ]);
   }, [customer, rejectCharges, order.id]);
 
+  const onDeclineExtension = useCallback(() => {
+    Alert.alert(customer.declineExtensionTitle, customer.declineExtensionBody, [
+      { text: customer.keepService, style: "cancel" },
+      {
+        text: customer.declineExtensionConfirm,
+        style: "destructive",
+        onPress: () => respondToExtension.mutate({ orderId: order.id, approve: false }),
+      },
+    ]);
+  }, [customer, respondToExtension, order.id]);
+
   const onCancelService = useCallback(() => {
     if (!currentUser) return;
     const timeUntil = (order.scheduledAt ?? 0) - Date.now();
@@ -126,9 +140,37 @@ export const CustomerActions = ({ order }: CustomerActionsProps) => {
   if (order.status === "Accepted") return <StatusHint text={customer.waitingQuote} />;
 
   if (order.status === "Scheduled" && order.scheduledAt) {
+    const hasExtensionRequest =
+      !!order.timeExtensionRequestedAt && !order.timeExtensionApprovedAt;
+
     return (
       <View style={styles.actions}>
-        <StatusHint text={customer.scheduledFor(formatDateTime(order.scheduledAt))} />
+        {hasExtensionRequest && (
+          <View style={styles.extensionCard}>
+            <Text style={styles.extensionTitle}>
+              Mechanic requesting {order.timeExtensionMinutes} more minutes
+            </Text>
+            <AppButton
+              onPress={() => respondToExtension.mutate({ orderId: order.id, approve: true })}
+              loading={respondToExtension.isPending}
+              disabled={isBusy}
+            >
+              {customer.approveExtension}
+            </AppButton>
+            <AppButton variant="danger" onPress={onDeclineExtension} disabled={isBusy}>
+              {customer.declineExtension}
+            </AppButton>
+          </View>
+        )}
+
+        {!hasExtensionRequest && !order.timeExtensionApprovedAt && (
+          <StatusHint text={customer.scheduledFor(formatDateTime(order.scheduledAt))} />
+        )}
+
+        {order.timeExtensionApprovedAt && order.extendedScheduledAt && (
+          <StatusHint text={customer.newScheduledFor(formatDateTime(order.extendedScheduledAt))} />
+        )}
+
         <AppButton variant="secondary" onPress={onMessageProvider}>
           {customer.messageProvider}
         </AppButton>
@@ -242,5 +284,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: "center",
     marginTop: spacing.xs,
+  },
+  extensionCard: {
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: 12,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  extensionTitle: {
+    fontSize: fontSize.base,
+    fontWeight: "600",
+    color: colors.textPrimary,
+    textAlign: "center",
   },
 });

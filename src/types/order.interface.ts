@@ -48,7 +48,9 @@ export type CancellationReason =
   | "expired_no_mechanic"
   | "customer_cancelled"
   | "mechanic_cancelled"
-  | "admin_cancelled";
+  | "admin_cancelled"
+  | "customer_no_show"
+  | "mechanic_no_show";
 
 // A priced line item (populated when a mechanic builds a quote — M5).
 export type OrderItem = {
@@ -138,6 +140,15 @@ export type RepairOrder = {
   pendingItems: OrderItem[] | null;
   pendingItemsAddedAt: number | null;
   pendingItemsExpiresAt: number | null;
+
+  // Time extension (mechanic-initiated).
+  timeExtensionRequestedAt: number | null;
+  timeExtensionMinutes: number | null;
+  timeExtensionApprovedAt: number | null;
+  extendedScheduledAt: number | null;
+
+  // Customer no-show.
+  customerNoShowAt: number | null;
 
   // Rating — mechanic → customer (feeds the customer profile's averageRating)
   customerRatedAt: number | null;

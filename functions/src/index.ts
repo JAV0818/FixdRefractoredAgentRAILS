@@ -14,6 +14,9 @@ import { completeOrder } from "./payments/complete-order";
 import { expireStaleOrders } from "./scheduled/expire-stale-orders";
 import { expireQuoteWindows } from "./scheduled/expire-quote-windows";
 import { expirePendingCharges } from "./scheduled/expire-pending-charges";
+import { requestTimeExtension } from "./late-arrival/request-time-extension";
+import { respondToTimeExtension } from "./late-arrival/respond-to-time-extension";
+import { markCustomerNoShow } from "./late-arrival/mark-customer-no-show";
 
 initializeApp();
 
@@ -32,4 +35,7 @@ export {
   expireStaleOrders,
   expireQuoteWindows,
   expirePendingCharges,
+  requestTimeExtension,
+  respondToTimeExtension,
+  markCustomerNoShow,
 };

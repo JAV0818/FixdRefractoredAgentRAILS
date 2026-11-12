@@ -12,10 +12,13 @@ import { spacing } from "@/theme";
 import type { RepairOrder } from "@/types/order.interface";
 
 import { ORDER_DETAIL_COPY } from "../order-detail.constants";
+import { formatDateTime } from "@/utils/format";
 import { useAcceptOrder } from "../hooks/use-accept-order";
 import { useStartOrder } from "../hooks/use-start-order";
 import { useCancelOrder } from "../hooks/use-cancel-order";
 import { useCompleteOrder } from "../hooks/use-complete-order";
+import { useRequestTimeExtension } from "../hooks/use-request-time-extension";
+import { useMarkNoShow } from "../hooks/use-mark-no-show";
 import { StatusHint } from "../components";
 
 type ProviderActionsProps = {
@@ -31,8 +34,11 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
   const startOrder = useStartOrder();
   const cancelOrder = useCancelOrder();
   const completeOrder = useCompleteOrder();
+  const requestExtension = useRequestTimeExtension();
+  const markNoShow = useMarkNoShow();
   const { provider } = ORDER_DETAIL_COPY;
-  const isBusy = startOrder.isPending || cancelOrder.isPending;
+  const isBusy =
+    startOrder.isPending || cancelOrder.isPending || requestExtension.isPending || markNoShow.isPending;
 
   const onAccept = useCallback(() => {
     acceptOrder.mutate(order.id, {
@@ -122,6 +128,26 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
     });
   }, [completeOrder, order.id, provider]);
 
+  const onRequestExtension = useCallback(() => {
+    Alert.alert(provider.extensionTitle, provider.extensionBody, [
+      { text: "15 minutes", onPress: () => requestExtension.mutate({ orderId: order.id, minutes: 15 }) },
+      { text: "30 minutes", onPress: () => requestExtension.mutate({ orderId: order.id, minutes: 30 }) },
+      { text: "45 minutes", onPress: () => requestExtension.mutate({ orderId: order.id, minutes: 45 }) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [provider, requestExtension, order.id]);
+
+  const onMarkNoShow = useCallback(() => {
+    Alert.alert(provider.noShowTitle, provider.noShowBody, [
+      { text: provider.keep, style: "cancel" },
+      {
+        text: provider.noShowConfirm,
+        style: "destructive",
+        onPress: () => markNoShow.mutate(order.id),
+      },
+    ]);
+  }, [provider, markNoShow, order.id]);
+
   const onRecordCashPayment = useCallback(() => {
     router.push({
       pathname: "/(provider-tabs)/queue/[orderId]/collect-payment",
@@ -164,11 +190,34 @@ export const ProviderActions = ({ order }: ProviderActionsProps) => {
   }
 
   if (order.status === "Scheduled" && isOwner) {
+    const gracePassed = Date.now() >= (order.scheduledAt ?? 0) + 15 * 60 * 1000;
+
     return (
       <View style={styles.actions}>
         <AppButton onPress={onStart} loading={startOrder.isPending} disabled={isBusy}>
           {provider.start}
         </AppButton>
+
+        {!order.timeExtensionRequestedAt && (
+          <AppButton variant="secondary" onPress={onRequestExtension} disabled={isBusy}>
+            {provider.requestExtension}
+          </AppButton>
+        )}
+
+        {order.timeExtensionRequestedAt && !order.timeExtensionApprovedAt && (
+          <StatusHint text={provider.extensionPending} />
+        )}
+
+        {order.timeExtensionApprovedAt && order.extendedScheduledAt && (
+          <StatusHint text={provider.extensionApproved(formatDateTime(order.extendedScheduledAt))} />
+        )}
+
+        {gracePassed && (
+          <AppButton variant="danger" onPress={onMarkNoShow} loading={markNoShow.isPending} disabled={isBusy}>
+            {provider.markNoShow}
+          </AppButton>
+        )}
+
         <AppButton variant="secondary" onPress={onChat} disabled={isBusy}>
           {provider.chat}
         </AppButton>

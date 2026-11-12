@@ -20,6 +20,9 @@ type CancelOrderWithPolicyResult = { success: boolean; charged: boolean };
 type CompleteOrderData = { orderId: string };
 type ApproveCustomChargesData = { orderId: string };
 type RejectCustomChargesData = { orderId: string };
+type RequestTimeExtensionData = { orderId: string; minutes: number };
+type RespondToTimeExtensionData = { orderId: string; approve: boolean };
+type MarkCustomerNoShowData = { orderId: string };
 type AddCustomChargesData = { orderId: string; newItems: { description: string | null; name: string; price: number; quantity: number }[] };
 
 export const paymentService = {
@@ -157,6 +160,36 @@ export const paymentService = {
     const callable = httpsCallable<RejectCustomChargesData, { success: boolean }>(
       functions,
       "rejectCustomCharges",
+    );
+    await callable({ orderId });
+  },
+
+  // Mechanic requests a time extension on a Scheduled order.
+  async requestTimeExtension(orderId: string, minutes: number): Promise<void> {
+    const functions = getFunctions(firebaseApp);
+    const callable = httpsCallable<RequestTimeExtensionData, { success: boolean }>(
+      functions,
+      "requestTimeExtension",
+    );
+    await callable({ orderId, minutes });
+  },
+
+  // Customer approves or declines a time extension request.
+  async respondToTimeExtension(orderId: string, approve: boolean): Promise<void> {
+    const functions = getFunctions(firebaseApp);
+    const callable = httpsCallable<RespondToTimeExtensionData, { success: boolean }>(
+      functions,
+      "respondToTimeExtension",
+    );
+    await callable({ orderId, approve });
+  },
+
+  // Mechanic marks customer as no-show after 15-min grace period.
+  async markCustomerNoShow(orderId: string): Promise<void> {
+    const functions = getFunctions(firebaseApp);
+    const callable = httpsCallable<MarkCustomerNoShowData, { success: boolean }>(
+      functions,
+      "markCustomerNoShow",
     );
     await callable({ orderId });
   },
