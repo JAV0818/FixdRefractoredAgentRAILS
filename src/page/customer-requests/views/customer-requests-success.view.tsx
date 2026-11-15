@@ -62,7 +62,12 @@ export const CustomerRequestsSuccessView = ({
       <SegmentedButtons
         value={tab}
         onValueChange={(v) => onTabChange(v as RequestTab)}
-        buttons={REQUEST_TABS.map((t) => ({ value: t.value, label: t.label }))}
+        buttons={REQUEST_TABS.map((t) => ({
+          value: t.value,
+          label: t.label,
+          checkedColor: colors.onPrimary,
+          style: tab === t.value ? { backgroundColor: colors.primary, borderColor: colors.primary } : undefined,
+        }))}
         style={styles.tabs}
       />
 
