@@ -25,6 +25,7 @@ export const completeOrder = onCall<CompleteOrderRequest>(async (request) => {
 
   const order = orderSnap.data() as {
     providerId: string | null;
+    customerId: string;
     status: string;
     inspectionCompletedAt?: number | null;
     pendingItems?: unknown[] | null;
@@ -57,6 +58,11 @@ export const completeOrder = onCall<CompleteOrderRequest>(async (request) => {
 
   batch.update(db.collection("users").doc(request.auth.uid), {
     "providerProfile.totalJobsCompleted": FieldValue.increment(1),
+  });
+
+  // Bump the customer's completed-orders counter.
+  batch.update(db.collection("users").doc(order.customerId), {
+    completedOrdersCount: FieldValue.increment(1),
   });
 
   await batch.commit();
