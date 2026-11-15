@@ -255,6 +255,26 @@ export const orderService = {
     return onSnapshot(q, (snap) => onData(snap.docs.map(snapToOrder)), onError);
   },
 
+  // Real-time: stream a customer's orders filtered by status, newest first.
+  // Used by the Active / History tab split so each tab has its own query with
+  // its own limit — no risk of one tab's volume pushing out the other's data.
+  // Requires composite index: customerId + status + createdAt.
+  subscribeToCustomerOrdersByStatus(
+    customerId: string,
+    statuses: OrderStatus[],
+    onData: (orders: RepairOrder[]) => void,
+    onError: (error: Error) => void,
+  ): Unsubscribe {
+    const q = query(
+      ordersCollection(),
+      where("customerId", "==", customerId),
+      where("status", "in", statuses),
+      orderBy("createdAt", "desc"),
+      limit(LIST_QUERY_LIMIT),
+    );
+    return onSnapshot(q, (snap) => onData(snap.docs.map(snapToOrder)), onError);
+  },
+
   // Real-time: stream the marketplace pool so a newly created order shows up
   // without a reload. Same query + client-side expiry filter as
   // getAvailableOrders (see its TODO on the M10 expire function).

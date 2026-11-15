@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { SegmentedButtons, Text } from "react-native-paper";
 import { useRouter } from "expo-router";
 
 import { AppButton, OrderListItem } from "@/components";
@@ -9,10 +9,17 @@ import { TAB_BAR_CLEARANCE } from "@/constants/layout";
 import { formatCurrency, formatDate } from "@/utils/format";
 import type { RepairOrder } from "@/types/order.interface";
 
-import { CUSTOMER_REQUESTS_COPY } from "../customer-requests.constants";
+import {
+  CUSTOMER_REQUESTS_COPY,
+  REQUEST_TABS,
+  type RequestTab,
+} from "../customer-requests.constants";
 
 type CustomerRequestsSuccessViewProps = {
-  orders: RepairOrder[];
+  activeOrders: RepairOrder[];
+  historyOrders: RepairOrder[];
+  tab: RequestTab;
+  onTabChange: (tab: RequestTab) => void;
 };
 
 const trailingFor = (order: RepairOrder): string => {
@@ -21,8 +28,14 @@ const trailingFor = (order: RepairOrder): string => {
   return formatDate(order.createdAt);
 };
 
-export const CustomerRequestsSuccessView = ({ orders }: CustomerRequestsSuccessViewProps) => {
+export const CustomerRequestsSuccessView = ({
+  activeOrders,
+  historyOrders,
+  tab,
+  onTabChange,
+}: CustomerRequestsSuccessViewProps) => {
   const router = useRouter();
+  const orders = tab === "active" ? activeOrders : historyOrders;
 
   const openOrder = useCallback(
     (orderId: string) => {
@@ -34,38 +47,64 @@ export const CustomerRequestsSuccessView = ({ orders }: CustomerRequestsSuccessV
     [router],
   );
 
-  if (orders.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyTitle}>{CUSTOMER_REQUESTS_COPY.emptyTitle}</Text>
-        <Text style={styles.emptyBody}>{CUSTOMER_REQUESTS_COPY.emptyBody}</Text>
-        <AppButton onPress={() => router.push("/(customer-tabs)/services")}>
-          Browse services
-        </AppButton>
-      </View>
-    );
-  }
+  const emptyTitle =
+    tab === "active"
+      ? CUSTOMER_REQUESTS_COPY.emptyActiveTitle
+      : CUSTOMER_REQUESTS_COPY.emptyHistoryTitle;
+
+  const emptyBody =
+    tab === "active"
+      ? CUSTOMER_REQUESTS_COPY.emptyActiveBody
+      : CUSTOMER_REQUESTS_COPY.emptyHistoryBody;
 
   return (
-    <FlatList
-      data={orders}
-      keyExtractor={(order) => order.id}
-      contentContainerStyle={styles.list}
-      showsVerticalScrollIndicator={false}
-      renderItem={({ item }) => (
-        <OrderListItem
-          title={item.vehicleInfo}
-          subtitle={item.description}
-          status={item.status}
-          trailing={trailingFor(item)}
-          onPress={() => openOrder(item.id)}
+    <View style={styles.container}>
+      <SegmentedButtons
+        value={tab}
+        onValueChange={(v) => onTabChange(v as RequestTab)}
+        buttons={REQUEST_TABS.map((t) => ({ value: t.value, label: t.label }))}
+        style={styles.tabs}
+      />
+
+      {orders.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+          <Text style={styles.emptyBody}>{emptyBody}</Text>
+          {tab === "active" && (
+            <AppButton onPress={() => router.push("/(customer-tabs)/services")}>
+              Browse services
+            </AppButton>
+          )}
+        </View>
+      ) : (
+        <FlatList
+          data={orders}
+          keyExtractor={(order) => order.id}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <OrderListItem
+              title={item.vehicleInfo}
+              subtitle={item.description}
+              status={item.status}
+              trailing={trailingFor(item)}
+              onPress={() => openOrder(item.id)}
+            />
+          )}
         />
       )}
-    />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  tabs: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
   list: {
     padding: spacing.lg,
     gap: spacing.md,
