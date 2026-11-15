@@ -23,6 +23,10 @@ export const PROFILE_COPY = {
   // Customer
   vehiclesTitle: "Your vehicles",
   noVehicles: "No vehicles saved yet.",
+  addVehicle: "Add vehicle",
+  removeVehicleTitle: "Remove vehicle?",
+  removeVehicleMessage: (name: string) => `${name} will be removed from your saved vehicles.`,
+  removeVehicleConfirm: "Remove",
   customerStatsTitle: "Your activity",
   completedOrders: "Completed orders",
 

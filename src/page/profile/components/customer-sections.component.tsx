@@ -1,14 +1,14 @@
-// CustomerSections — the customer-only parts of the profile: saved vehicles and
-// activity stats. Dumb: data in, JSX out. (Vehicle add/remove is deferred — see
-// DEFERRED.md.)
+// CustomerSections — the customer-only parts of the profile: saved vehicles
+// (add / remove) and activity stats. Dumb: data in, events out.
 
 import { memo } from "react";
 import { StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { IconButton, Text } from "react-native-paper";
 
-import { GlassCard, StatPill } from "@/components";
+import { AppButton, GlassCard, StatPill } from "@/components";
 import { colors, fontSize, fontWeight, spacing } from "@/theme";
-import type { Vehicle } from "@/types/user.interface";
+import { MAX_VEHICLES, type Vehicle } from "@/types/user.interface";
+import { vehicleDetail, vehicleTitle } from "@/utils/vehicle";
 
 import { PROFILE_COPY } from "../profile.constants";
 import { formatRating } from "../utils/profile-format";
@@ -18,17 +18,19 @@ type CustomerSectionsProps = {
   averageRating: number | null;
   totalRatingsCount: number;
   completedOrdersCount: number;
+  removingVehicleId: string | null;
+  onAddVehicle: () => void;
+  onRemoveVehicle: (vehicle: Vehicle) => void;
 };
-
-const vehicleTitle = (v: Vehicle) => `${v.year} ${v.make} ${v.model}`.trim();
-const vehicleDetail = (v: Vehicle) =>
-  [v.color, v.licensePlate].filter(Boolean).join(" · ");
 
 export const CustomerSections = memo(function CustomerSections({
   vehicles,
   averageRating,
   totalRatingsCount,
   completedOrdersCount,
+  removingVehicleId,
+  onAddVehicle,
+  onRemoveVehicle,
 }: CustomerSectionsProps) {
   return (
     <>
@@ -37,16 +39,31 @@ export const CustomerSections = memo(function CustomerSections({
         {vehicles.length === 0 ? (
           <Text style={styles.muted}>{PROFILE_COPY.noVehicles}</Text>
         ) : (
-          vehicles.map((v, i) => {
+          vehicles.map((v) => {
             const detail = vehicleDetail(v);
             return (
-              <View key={`${vehicleTitle(v)}-${i}`} style={styles.vehicle}>
-                <Text style={styles.vehicleName}>{vehicleTitle(v)}</Text>
-                {detail ? <Text style={styles.muted}>{detail}</Text> : null}
+              <View key={v.id} style={styles.vehicleRow}>
+                <View style={styles.vehicle}>
+                  <Text style={styles.vehicleName}>{vehicleTitle(v)}</Text>
+                  {detail ? <Text style={styles.muted}>{detail}</Text> : null}
+                </View>
+                <IconButton
+                  icon="trash-can-outline"
+                  iconColor={colors.danger}
+                  size={20}
+                  disabled={removingVehicleId !== null}
+                  loading={removingVehicleId === v.id}
+                  onPress={() => onRemoveVehicle(v)}
+                />
               </View>
             );
           })
         )}
+        {vehicles.length < MAX_VEHICLES ? (
+          <AppButton variant="tertiary" icon="plus" onPress={onAddVehicle}>
+            {PROFILE_COPY.addVehicle}
+          </AppButton>
+        ) : null}
       </GlassCard>
 
       <GlassCard style={styles.card}>
@@ -72,7 +89,13 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
   },
+  vehicleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   vehicle: {
+    flex: 1,
     gap: spacing.xxs,
   },
   vehicleName: {

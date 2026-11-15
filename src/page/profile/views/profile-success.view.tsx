@@ -3,7 +3,7 @@
 // render the customer or mechanic sections. The page header lives in the page.
 
 import { useCallback, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { GlassCard, IconActionButton, KeyboardSafeView } from "@/components";
@@ -11,7 +11,8 @@ import { spacing } from "@/theme";
 import { TAB_BAR_CLEARANCE } from "@/constants/layout";
 import { useImagePicker } from "@/hooks/use-image-picker";
 import { useSignOut } from "@/page/auth/hooks/use-sign-out";
-import type { UserProfile } from "@/types/user.interface";
+import type { UserProfile, Vehicle } from "@/types/user.interface";
+import { vehicleTitle } from "@/utils/vehicle";
 
 import { PROFILE_COPY } from "../profile.constants";
 import { displayNameOf, profileSubtitle } from "../utils/profile-format";
@@ -27,6 +28,7 @@ import { MechanicAboutView } from "./mechanic-about.view";
 import { useUpdateAvatar } from "../hooks/use-update-avatar";
 import { useUpdateContact } from "../hooks/use-update-contact";
 import { useToggleAvailability } from "../hooks/use-toggle-availability";
+import { useRemoveVehicle } from "../hooks/use-remove-vehicle";
 
 type ProfileSuccessViewProps = {
   profile: UserProfile;
@@ -40,6 +42,7 @@ export const ProfileSuccessView = ({ profile }: ProfileSuccessViewProps) => {
   const updateAvatar = useUpdateAvatar();
   const updateContact = useUpdateContact();
   const toggleAvailability = useToggleAvailability();
+  const removeVehicle = useRemoveVehicle();
   const signOut = useSignOut();
 
   const [editing, setEditing] = useState(false);
@@ -79,6 +82,29 @@ export const ProfileSuccessView = ({ profile }: ProfileSuccessViewProps) => {
   const onToggleAvailability = useCallback(
     (next: boolean) => toggleAvailability.mutate(next),
     [toggleAvailability],
+  );
+
+  const onAddVehicle = useCallback(
+    () => router.push("/(customer-tabs)/profile/add-vehicle"),
+    [router],
+  );
+
+  const onRemoveVehicle = useCallback(
+    (vehicle: Vehicle) => {
+      Alert.alert(
+        PROFILE_COPY.removeVehicleTitle,
+        PROFILE_COPY.removeVehicleMessage(vehicleTitle(vehicle)),
+        [
+          { text: PROFILE_COPY.cancel, style: "cancel" },
+          {
+            text: PROFILE_COPY.removeVehicleConfirm,
+            style: "destructive",
+            onPress: () => removeVehicle.mutate(vehicle.id),
+          },
+        ],
+      );
+    },
+    [removeVehicle],
   );
 
   const onSignOut = useCallback(() => signOut.mutate(), [signOut]);
@@ -155,6 +181,9 @@ export const ProfileSuccessView = ({ profile }: ProfileSuccessViewProps) => {
           averageRating={profile.averageRating}
           totalRatingsCount={profile.totalRatingsCount}
           completedOrdersCount={profile.completedOrdersCount}
+          removingVehicleId={removeVehicle.isPending ? (removeVehicle.variables ?? null) : null}
+          onAddVehicle={onAddVehicle}
+          onRemoveVehicle={onRemoveVehicle}
         />
       ) : null}
 
