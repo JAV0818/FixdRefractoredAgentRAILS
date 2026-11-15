@@ -10,6 +10,11 @@ export const QUOTE_REQUEST_COPY = {
     { title: "Add photos", subtitle: "Photos help mechanics quote more accurately. Optional." },
     { title: "Review & submit", subtitle: "Make sure everything looks right before you send it." },
   ],
+  vehiclePicker: {
+    addFirst: "Add your first vehicle",
+    addAnother: "Add a vehicle",
+    capHint: "You've reached the 3-vehicle limit. Remove one in Profile to add another.",
+  },
   back: "Back",
   next: "Next",
   submit: "Submit request",

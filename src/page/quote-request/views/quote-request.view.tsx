@@ -3,7 +3,7 @@
 // with `trigger`, opens the image picker as a side effect, and on submit
 // creates the order then attaches any photos before redirecting to Requests.
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { HelperText, Text } from "react-native-paper";
 import { useForm } from "react-hook-form";
@@ -16,8 +16,11 @@ import { SERVICE_CATEGORIES } from "@/constants/service-categories";
 import { formatDateTime } from "@/utils/format";
 import { MAX_BOOKING_ADVANCE_MS } from "@/services/order-service";
 import { useImagePicker } from "@/hooks/use-image-picker";
+import { useCustomerVehicles } from "@/hooks/use-customer-vehicles";
+import { vehicleSummary } from "@/utils/vehicle";
+import type { Vehicle } from "@/types/user.interface";
 
-import { CategoryChips, FormTextField, StepIndicator } from "../components";
+import { CategoryChips, FormTextField, StepIndicator, VehiclePicker } from "../components";
 import { useCreateOrder } from "../hooks/use-create-order";
 import { useUploadImages } from "../hooks/use-upload-images";
 import { MAX_QUOTE_IMAGES, QUOTE_REQUEST_COPY } from "../quote-request.constants";
@@ -70,6 +73,32 @@ export const QuoteRequestView = () => {
   });
 
   const selectedCategories = watch("categories");
+
+  // The picker fills `vehicleInfo` (a plain string — the order schema is
+  // unchanged). Selection is derived from it, so it can't drift from the form.
+  const { vehicles, isLoading: vehiclesLoading } = useCustomerVehicles();
+  const vehicleInfo = watch("vehicleInfo");
+  const selectedVehicleId = useMemo(
+    () => vehicles.find((v) => vehicleSummary(v) === vehicleInfo)?.id ?? null,
+    [vehicles, vehicleInfo],
+  );
+
+  const selectVehicle = useCallback(
+    (v: Vehicle) => setValue("vehicleInfo", vehicleSummary(v), { shouldValidate: true }),
+    [setValue],
+  );
+
+  // Pre-select the only vehicle, and the newest one right after the customer
+  // adds it from the modal (so they land back on step 2 with it chosen).
+  const prevVehicleCount = useRef<number | null>(null);
+  useEffect(() => {
+    if (vehiclesLoading) return;
+    const prev = prevVehicleCount.current;
+    prevVehicleCount.current = vehicles.length;
+    const added = prev !== null && vehicles.length > prev;
+    const onlyOne = prev === null && vehicles.length === 1;
+    if (added || onlyOne) selectVehicle(vehicles[vehicles.length - 1]);
+  }, [vehicles, vehiclesLoading, selectVehicle]);
 
   const toggleCategory = useCallback(
     (label: string) => {
@@ -154,13 +183,19 @@ export const QuoteRequestView = () => {
         )}
 
         {step === 1 && (
-          <FormTextField
-            control={control}
-            name="vehicleInfo"
-            label="Vehicle"
-            placeholder="e.g. 2019 Toyota Camry"
-            autoCapitalize="words"
-          />
+          <>
+            <VehiclePicker
+              vehicles={vehicles}
+              selected={selectedVehicleId}
+              onSelect={selectVehicle}
+              onAddNew={() => router.push("/(customer-tabs)/services/add-vehicle")}
+            />
+            {errors.vehicleInfo && (
+              <HelperText type="error" visible>
+                {errors.vehicleInfo.message}
+              </HelperText>
+            )}
+          </>
         )}
 
         {step === 2 && (

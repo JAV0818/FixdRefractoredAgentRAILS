@@ -11,7 +11,7 @@ import { AppTextInput, MultilineTextInput } from "@/components";
 import type { QuoteRequestForm } from "../interfaces/quote-request.interface";
 
 // Only the free-text fields — `categories` is handled by CategoryChips.
-type StringField = "description" | "vehicleInfo" | "address" | "city" | "state" | "zip";
+type StringField = "description" | "address" | "city" | "state" | "zip";
 
 type FormTextFieldProps = {
   control: Control<QuoteRequestForm>;
