@@ -45,6 +45,11 @@ service cloud.firestore {
       );
     }
 
+    // A customer may save at most 3 vehicles (mirrors MAX_VEHICLES in the app).
+    function vehicleCapOk() {
+      return request.resource.data.get('vehicles', []).size() <= 3;
+    }
+
     // Deactivation and the rating / earnings counters are not self-editable.
     function protectedFieldsUnchanged() {
       return unchanged('isActive', true)
@@ -68,7 +73,7 @@ service cloud.firestore {
         && !('providerProfile' in request.resource.data);
       allow update: if isAuthenticated() && (
         isOwner() ||
-        (currentUserId() == userId && roleEditAllowed() && protectedFieldsUnchanged())
+        (currentUserId() == userId && roleEditAllowed() && protectedFieldsUnchanged() && vehicleCapOk())
       );
       allow delete: if false;
     }

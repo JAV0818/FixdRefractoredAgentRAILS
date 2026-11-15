@@ -2,7 +2,6 @@
 // Hooks call these; views and components never import this directly.
 
 import {
-  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -11,13 +10,22 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   setDoc,
   updateDoc,
   where,
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { MechanicProfile, ProviderDetails, UserProfile, UserRole } from "@/types/user.interface";
+import {
+  MAX_VEHICLES,
+  type MechanicProfile,
+  type ProviderDetails,
+  type UserProfile,
+  type UserRole,
+  type Vehicle,
+  type VehicleInput,
+} from "@/types/user.interface";
 
 // Coerce a possibly-partial provider profile (older / hand-edited docs) into a
 // fully-formed ProviderDetails so the UI never reads an undefined field.
@@ -33,6 +41,14 @@ const normalizeProviderProfile = (raw: unknown): ProviderDetails | undefined => 
     totalJobsCompleted: p.totalJobsCompleted ?? 0,
     yearsExperience: p.yearsExperience ?? 0,
   };
+};
+
+// Vehicles saved before ids existed have none. Backfill a deterministic id from
+// the array position so the UI always has a stable key; the next add/remove
+// transaction persists the backfilled ids.
+const normalizeVehicles = (raw: unknown): Vehicle[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((v, i) => ({ ...(v as Vehicle), id: (v as Partial<Vehicle>).id ?? `legacy-${i}` }));
 };
 
 const mapToMechanicProfile = (id: string, data: Record<string, unknown>): MechanicProfile => {
@@ -53,14 +69,6 @@ const mapToMechanicProfile = (id: string, data: Record<string, unknown>): Mechan
       yearsExperience: 0,
     },
   };
-};
-
-type Vehicle = {
-  make: string;
-  model: string;
-  year: string;
-  color?: string;
-  licensePlate?: string;
 };
 
 type MechanicProfileData = {
@@ -85,6 +93,7 @@ export const userService = {
       // A provider doc with a partial providerProfile would otherwise crash the
       // profile screen (e.g. specialties missing → .map on undefined).
       providerProfile: normalizeProviderProfile(data.providerProfile),
+      vehicles: data.vehicles === undefined ? undefined : normalizeVehicles(data.vehicles),
     };
   },
 
@@ -98,13 +107,31 @@ export const userService = {
     }
   },
 
-  async saveVehicle(userId: string, vehicle: Vehicle): Promise<void> {
+  // Appends a vehicle (id generated here). Runs in a transaction so the
+  // MAX_VEHICLES cap holds even with concurrent writes from two devices.
+  // Returns the updated list so callers can patch their cache without a refetch.
+  async addVehicle(userId: string, input: VehicleInput): Promise<Vehicle[]> {
     const ref = doc(db, "users", userId);
-    // arrayUnion appends atomically server-side — no read-modify-write, so two
-    // concurrent saves can't clobber each other (lost-update race).
-    await updateDoc(ref, {
-      vehicles: arrayUnion(vehicle),
-      updatedAt: Date.now(),
+    const vehicle: Vehicle = { ...input, id: doc(collection(db, "users")).id };
+    return runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const vehicles = normalizeVehicles(snap.data()?.vehicles);
+      if (vehicles.length >= MAX_VEHICLES) throw new Error("Vehicle limit reached");
+      const next = [...vehicles, vehicle];
+      tx.update(ref, { vehicles: next, updatedAt: Date.now() });
+      return next;
+    });
+  },
+
+  // Removes a vehicle by id. Filtering by id (not arrayRemove's deep equality)
+  // can't silently miss on a stale or legacy object.
+  async removeVehicle(userId: string, vehicleId: string): Promise<Vehicle[]> {
+    const ref = doc(db, "users", userId);
+    return runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const vehicles = normalizeVehicles(snap.data()?.vehicles).filter((v) => v.id !== vehicleId);
+      tx.update(ref, { vehicles, updatedAt: Date.now() });
+      return vehicles;
     });
   },
 
