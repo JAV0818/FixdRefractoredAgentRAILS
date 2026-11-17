@@ -358,7 +358,12 @@ export const orderService = {
     onError: (error: Error) => void,
     filters?: { status?: OrderStatus },
   ): Unsubscribe {
-    const constraints: QueryConstraint[] = [orderBy("createdAt", "desc")];
+    // Capped like every other live query: an unbounded stream re-bills and
+    // re-renders the whole order history on every change.
+    const constraints: QueryConstraint[] = [
+      orderBy("createdAt", "desc"),
+      limit(LIST_QUERY_LIMIT),
+    ];
     if (filters?.status) {
       constraints.unshift(where("status", "==", filters.status));
     }
