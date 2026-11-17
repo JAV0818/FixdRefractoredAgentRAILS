@@ -34,7 +34,20 @@ export type ProviderDetails = {
   specialties: string[];
   totalEarnings: number;
   totalJobsCompleted: number;
+  totalRatingsCount: number; // how many customer ratings feed averageRating
   yearsExperience: number;
+};
+
+// The customer-safe slice of a mechanic, mirrored from `users/{uid}` into
+// `provider-public/{uid}` by the syncProviderPublic Cloud Function. Readable by
+// any signed-in user; never contains email, phone, earnings, or tokens.
+export type ProviderPublic = {
+  averageRating: number;
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  totalJobsCompleted: number;
+  totalRatingsCount: number;
 };
 
 // Admin-facing mechanic summary. Derived from the `users` collection where

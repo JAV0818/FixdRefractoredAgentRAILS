@@ -58,6 +58,7 @@ service cloud.firestore {
         && unchanged('totalRatingsCount', 0)
         && providerStat(request.resource.data, 'averageRating') == providerStat(resource.data, 'averageRating')
         && providerStat(request.resource.data, 'totalJobsCompleted') == providerStat(resource.data, 'totalJobsCompleted')
+        && providerStat(request.resource.data, 'totalRatingsCount') == providerStat(resource.data, 'totalRatingsCount')
         && providerStat(request.resource.data, 'totalEarnings') == providerStat(resource.data, 'totalEarnings');
     }
 
@@ -76,6 +77,14 @@ service cloud.firestore {
         (currentUserId() == userId && roleEditAllowed() && protectedFieldsUnchanged() && vehicleCapOk())
       );
       allow delete: if false;
+    }
+
+    // Customer-safe mirror of each mechanic (name, photo, rating, job count),
+    // written only by the syncProviderPublic Cloud Function. Any signed-in user
+    // may read it; `users/{uid}` itself stays private (email, phone, earnings).
+    match /provider-public/{providerId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
     }
 
     // Payment and financial fields that only Cloud Functions (Admin SDK) may

@@ -17,6 +17,7 @@ import { expirePendingCharges } from "./scheduled/expire-pending-charges";
 import { requestTimeExtension } from "./late-arrival/request-time-extension";
 import { respondToTimeExtension } from "./late-arrival/respond-to-time-extension";
 import { markCustomerNoShow } from "./late-arrival/mark-customer-no-show";
+import { syncProviderPublic } from "./provider-public/sync-provider-public";
 
 initializeApp();
 
@@ -38,4 +39,5 @@ export {
   requestTimeExtension,
   respondToTimeExtension,
   markCustomerNoShow,
+  syncProviderPublic,
 };

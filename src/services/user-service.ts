@@ -39,6 +39,7 @@ const normalizeProviderProfile = (raw: unknown): ProviderDetails | undefined => 
     averageRating: p.averageRating ?? 0,
     totalEarnings: p.totalEarnings ?? 0,
     totalJobsCompleted: p.totalJobsCompleted ?? 0,
+    totalRatingsCount: p.totalRatingsCount ?? 0,
     yearsExperience: p.yearsExperience ?? 0,
   };
 };
@@ -66,6 +67,7 @@ const mapToMechanicProfile = (id: string, data: Record<string, unknown>): Mechan
       specialties: [],
       totalEarnings: 0,
       totalJobsCompleted: 0,
+      totalRatingsCount: 0,
       yearsExperience: 0,
     },
   };
@@ -143,6 +145,7 @@ export const userService = {
         isAvailable: true,
         averageRating: 0,
         totalJobsCompleted: 0,
+        totalRatingsCount: 0,
         totalEarnings: 0,
       },
       updatedAt: Date.now(),

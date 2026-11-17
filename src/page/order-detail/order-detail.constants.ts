@@ -1,5 +1,9 @@
 // Copy for the shared (customer + provider) order-detail screen.
 
+// Rating line under the mechanic's name on the customer's order detail.
+export const formatProviderRating = (average: number, count: number): string =>
+  count > 0 && average > 0 ? `★ ${average.toFixed(1)} (${count})` : "★ New mechanic";
+
 export const ORDER_DETAIL_COPY = {
   loading: "Loading order…",
   error: "We couldn't load this order.",

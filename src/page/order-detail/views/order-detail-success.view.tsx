@@ -14,8 +14,9 @@ import { useAuthContext } from "@/providers/auth-provider";
 import { useUserProfile } from "@/page/auth/hooks/use-user-profile";
 import type { RepairOrder } from "@/types/order.interface";
 
-import { ORDER_DETAIL_COPY } from "../order-detail.constants";
+import { formatProviderRating, ORDER_DETAIL_COPY } from "../order-detail.constants";
 import { useOrderInspection } from "../hooks/use-order-inspection";
+import { useProviderPublic } from "../hooks/use-provider-public";
 
 import { DetailSection, OrderParty, PhotoGallery, QuoteSummary } from "../components";
 import { AdminActions } from "./order-detail-admin-actions.view";
@@ -43,15 +44,24 @@ export const OrderDetailSuccessView = ({ order }: OrderDetailSuccessViewProps) =
   const inspectionPhotos = toPhotos(inspection?.photoUrls, inspection?.photoThumbUrls);
 
   // Show the other party — the mechanic to the customer, the customer to the
-  // mechanic. Photo/phone come from their profile (not denormalized on the
-  // order). The customer's phone is only shown to the assigned mechanic, not to
-  // every mechanic browsing the pool.
+  // mechanic. The customer's phone is only shown to the assigned mechanic, not
+  // to every mechanic browsing the pool.
+  //
+  // A customer can't read a mechanic's `users` doc (email, phone, earnings), so
+  // the mechanic's photo + rating come from the live `provider-public` mirror.
+  // The mechanic side still reads the customer's profile as before.
   const isOwner = !!order.providerId && order.providerId === currentUser?.id;
-  const otherPartyId = role === "customer" ? order.providerId : order.customerId;
-  const otherParty = useUserProfile(otherPartyId ?? undefined);
+  const isCustomer = role === "customer";
+  const otherPartyId = isCustomer ? order.providerId : order.customerId;
+  const otherParty = useUserProfile(isCustomer ? undefined : (otherPartyId ?? undefined));
+  const providerPublic = useProviderPublic(isCustomer ? (order.providerId ?? undefined) : undefined);
   const partyName = role === "customer" ? order.providerName : order.customerName;
-  const partyPhone =
-    role === "customer" ? (otherParty.data?.phone ?? null) : isOwner ? order.customerPhone : null;
+  const partyPhoto = isCustomer ? providerPublic.data?.photoUrl : otherParty.data?.photoUrl;
+  const partyRatingLabel =
+    isCustomer && providerPublic.data
+      ? formatProviderRating(providerPublic.data.averageRating, providerPublic.data.totalRatingsCount)
+      : null;
+  const partyPhone = isCustomer ? null : isOwner ? order.customerPhone : null;
 
   return (
     <ScrollView
@@ -72,7 +82,12 @@ export const OrderDetailSuccessView = ({ order }: OrderDetailSuccessViewProps) =
               : ORDER_DETAIL_COPY.sections.customer
           }
         >
-          <OrderParty name={partyName} photoUrl={otherParty.data?.photoUrl} phone={partyPhone} />
+          <OrderParty
+            name={partyName}
+            photoUrl={partyPhoto}
+            phone={partyPhone}
+            ratingLabel={partyRatingLabel}
+          />
         </DetailSection>
       )}
 

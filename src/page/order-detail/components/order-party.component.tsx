@@ -1,5 +1,6 @@
 // OrderParty — the other party on an order (the mechanic shown to the customer,
-// the customer shown to the mechanic): avatar + name + tappable phone. Dumb.
+// the customer shown to the mechanic): avatar + name + optional rating line +
+// tappable phone. Dumb.
 
 import { memo } from "react";
 import { Linking, StyleSheet, TouchableOpacity, View } from "react-native";
@@ -12,14 +13,22 @@ type OrderPartyProps = {
   name: string;
   photoUrl?: string | null;
   phone?: string | null;
+  // Pre-formatted rating line (e.g. "★ 4.8 (23)"); omitted for the provider side.
+  ratingLabel?: string | null;
 };
 
-export const OrderParty = memo(function OrderParty({ name, photoUrl, phone }: OrderPartyProps) {
+export const OrderParty = memo(function OrderParty({
+  name,
+  photoUrl,
+  phone,
+  ratingLabel,
+}: OrderPartyProps) {
   return (
     <View style={styles.row}>
       <Avatar name={name} photoUrl={photoUrl} />
       <View style={styles.info}>
         <Text style={styles.name}>{name}</Text>
+        {ratingLabel ? <Text style={styles.rating}>{ratingLabel}</Text> : null}
         {phone ? (
           <TouchableOpacity onPress={() => Linking.openURL(`tel:${phone}`)} hitSlop={6}>
             <Text style={styles.phone}>{phone}</Text>
@@ -44,6 +53,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
+  },
+  rating: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
   },
   phone: {
     fontSize: fontSize.sm,
